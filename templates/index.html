@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperature Monitor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            font-size: 16px;
+        }
+
+        @media (max-width: 576px) {
+            body {
+                font-size: 14px;
+            }
+        }
+
+        .container {
+            padding: 15px;
+        }
+
+        .card {
+            margin-bottom: 20px;
+        }
+    </style>
+    <script>
+        async function fetchTemperature() {
+            try {
+                const response = await fetch('/api/temperature');
+                const data = await response.json();
+
+                const temperatureElement = document.getElementById('temperature');
+                if (data.error) {
+                    temperatureElement.innerText = `⚠️ Error: ${data.error}`;
+                } else {
+                    temperatureElement.innerText = `${data.temperature} °C`;
+                }
+            } catch (error) {
+                const temperatureElement = document.getElementById('temperature');
+                temperatureElement.innerText = 'Error: Unable to fetch temperature';
+            }
+        }
+
+        setInterval(fetchTemperature, 5000);
+        window.onload = fetchTemperature;
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-5 text-center">Dashboard</h1>
+        <div class="row">
+            <div class="col-12 col-sm-6 col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Sensor Data</h5>
+                        <p class="card-text">Temperature: <span id="temperature">Loading...</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
