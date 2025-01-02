@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "i2c-dev.h": "c",
+        "db_utils.h": "c"
+    }
+}

@@ -6,6 +6,7 @@
 #include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
 #include <time.h>
+#include "db_utils.h"
 
 // BMP280 I2C Address
 #define BMP280_I2C_ADDR 0x76
@@ -64,20 +65,6 @@ char* get_current_time() {
     return buffer;
 }
 
-// Function to log temperature to the File
-void log_temperature(float temperature) {
-    FILE *file = fopen("temperature.log", "a");  // Open in append mode
-    if (file == NULL) {
-        perror("Failed to open log file");
-        return;
-    }
-
-    // Append timestamp and temperature to the file
-    fprintf(file, "%s - Temperature: %.2f°C\n", get_current_time(), temperature);
-
-    fclose(file);  // Close the file to save changes
-}
-
 int main() {
     const char *i2c_device = "/dev/i2c-1"; // I2C bus
     int file;
@@ -108,7 +95,8 @@ int main() {
         close(file);
         exit(1);
     }
-        // Extract calibration coefficients
+    
+    // Extract calibration coefficients
     dig_T1 = (calib_data[1] << 8) | calib_data[0];
     dig_T2 = (calib_data[3] << 8) | calib_data[2];
     dig_T3 = (calib_data[5] << 8) | calib_data[4];
@@ -141,12 +129,14 @@ int main() {
     float temperature = convert_temperature(raw_temp);
 
     // Log the temperature
-    // log_temperature(temperature);
 
     // printf("Temperature logged successfully.\n");
 
+
     printf("Temperature: %.2f °C\n", temperature);
     
+    // Insert temperature into database
+    insert_temperature_to_db(temperature);
     return 0;
 }
 
