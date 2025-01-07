@@ -3,30 +3,57 @@ from flask_sqlalchemy import SQLAlchemy
 import subprocess
 from datetime import datetime
 import schedule  
+import logging
+import mysql.connector
 
 app = Flask(__name__, template_folder='templates')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///sensor_data.db'  # SQLite example
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://myuser:123@localhost/sensor_data'  # MariaDB example
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# Function to read temperature from the C program
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Function to run the C program and fetch the latest temperature from the database
 def get_temperature():
     try:
-        # Run the C program to read the temperature
+        # Run the C program to read the temperature and insert it into the database
         result = subprocess.run(["./read_temp"], capture_output=True, text=True)
-        if result.returncode == 0:
-            # Extract the temperature from the C program's output
-            output = result.stdout.strip()
-            if "Temperature:" in output:
-                temperature = output.split("Temperature:")[1].strip()
-                # Remove the oC and convert to float
-                temperature = float(temperature.replace(' °C', ''))
-                return temperature
-            else:
-                return None
+
+        # Connect to the database
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="myuser",
+            password="123",
+            database="sensor_data"
+        )
+
+        # Create a cursor object to execute queries
+        cursor = conn.cursor()
+        
+        # Define the SQL query to fetch the most recent temperature data
+        query = "SELECT temperature FROM temperature_logs ORDER BY timestamp DESC LIMIT 1"
+        
+        # Execute the query
+        cursor.execute(query)
+
+        # Fetch the most recent result
+        result = cursor.fetchone()
+        
+        # Close the cursor and connection
+        cursor.close()
+        conn.close()
+        
+        # Log the fetched temperature
+        if result:
+            logging.debug(f"Fetched temperature from database: {result[0]}")
+            return result[0]
         else:
+            logging.debug("No temperature record found in the database.")
             return None
+        
     except Exception as e:
+        logging.error(f"Error in get_temperature: {e}")
         return None
 
 # Database Model
@@ -50,13 +77,11 @@ def index():
     
     temperature = get_temperature()
     if temperature:
-        #Save the temperature to the database
-        new_data = SensorData(temperature=temperature)
-        db.session.add(new_data)
-        db.session.commit()
         sensor_data = {"temperature": temperature}
+        logging.debug(f"Temperature to be displayed: {temperature}")
     else:
         sensor_data = {"error": "Failed to read temperature"}
+        logging.debug("Failed to read temperature")
     return render_template('index.html', sensor_data=sensor_data)
 
 # API route to fetch the latest temperature
@@ -64,10 +89,6 @@ def index():
 def api_temperature():
     temperature = get_temperature()
     if temperature:
-        #Save the temperature to the database
-        new_data = SensorData(temperature=temperature)
-        db.session.add(new_data)
-        db.session.commit()
         return jsonify({"temperature": temperature})
     else:
         return jsonify({"error": "Failed to read temperature"}), 500
