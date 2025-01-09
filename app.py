@@ -1,14 +1,16 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request, redirect, url_for, flash, session
 from flask_sqlalchemy import SQLAlchemy
 import subprocess
 from datetime import datetime
 import schedule  
 import logging
 import mysql.connector
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__, template_folder='templates')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://myuser:123@localhost/sensor_data'  # MariaDB example
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = 'mysecretkey'
 db = SQLAlchemy(app)
 
 # Configure logging
@@ -67,11 +69,14 @@ with app.app_context():
     db.create_all()
 
 # Schedule the temperature reading function
-schedule.every(5).seconds.do(get_temperature)
+schedule.every(60).seconds.do(get_temperature)
 
 # Home route to display the latest temperature
 @app.route('/')
 def index():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
     # Run pending scheduled tasks
     schedule.run_pending()
     
@@ -87,6 +92,9 @@ def index():
 # API route to fetch the latest temperature
 @app.route('/api/temperature', methods=['GET'])
 def api_temperature():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
     temperature = get_temperature()
     if temperature:
         return jsonify({"temperature": temperature})
@@ -99,6 +107,29 @@ def api_temperature_history():
     records = SensorData.query.order_by(SensorData.timestamp.desc()).limit(10).all()
     history = [{"timestamp": record.timestamp, "temperature": record.temperature} for record in records]
     return jsonify(history)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    static_username = 'admin'
+    static_password = '123'
+
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        if username == static_username and password == static_password:
+            session['user_id'] = username
+            flash('Login successful!', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash('Login failed. Check your username and/or password.', 'danger')
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    flash('You have been logged out.', 'success')
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
