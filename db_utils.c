@@ -61,3 +61,52 @@ void insert_temperature_to_db(float temperature) {
     // Close the connection
     mysql_close(conn);
 }
+
+// Function to get the most recent temperature from MariaDB
+float get_temperature_from_db() {
+    MYSQL *conn;
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+    float temperature = 0.0;
+
+    const char *server = "localhost";
+    const char *user = "myuser";     // Replace with your MariaDB username
+    const char *password = "123"; // Replace with your MariaDB password
+    const char *database = "sensor_data";  // Replace with your database name
+
+    // Initialize connection
+    conn = mysql_init(NULL);
+    if (conn == NULL) {
+        fprintf(stderr, "mysql_init() failed\n");
+        return -1;
+    }
+
+    if (mysql_real_connect(conn, server, user, password, database, 0, NULL, 0) == NULL) {
+        fprintf(stderr, "mysql_real_connect() failed\n");
+        mysql_close(conn);
+        return -1;
+    }
+
+    if (mysql_query(conn, "SELECT temperature FROM temperature_logs ORDER BY timestamp DESC LIMIT 1")) {
+        fprintf(stderr, "SELECT query failed. Error: %s\n", mysql_error(conn));
+        mysql_close(conn);
+        return -1;
+    }
+
+    res = mysql_store_result(conn);
+    if (res == NULL) {
+        fprintf(stderr, "mysql_store_result() failed. Error: %s\n", mysql_error(conn));
+        mysql_close(conn);
+        return -1;
+    }
+
+    row = mysql_fetch_row(res);
+    if (row != NULL) {
+        temperature = atof(row[0]);
+    }
+
+    mysql_free_result(res);
+    mysql_close(conn);
+
+    return temperature;
+}

@@ -1,6 +1,12 @@
 {
     "files.associations": {
         "i2c-dev.h": "c",
-        "db_utils.h": "c"
+        "db_utils.h": "c",
+        "stdio.h": "c",
+        "pigpio.h": "c",
+        "wiringpi.h": "c",
+        "wiringpii2c.h": "c",
+        "lcd.h": "c",
+        "pcf8574.h": "c"
     }
 }
