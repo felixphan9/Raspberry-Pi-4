@@ -54,6 +54,6 @@ int main() {
     lcdPosition(lcdhd, 0, 0); // set the LCD cursor position to (0,0)
     lcdPrintf(lcdhd, "Temperature:");
     lcdPosition(lcdhd, 0, 1); // set the LCD cursor position to (0,1)
-    lcdPrintf(lcdhd, "%.2f C", temperature); // print the temperature value
+    lcdPrintf(lcdhd, "%.2f C", temperature); // print the temperature value on the LCD
     return 0;
 }

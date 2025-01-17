@@ -1,5 +1,8 @@
 # Raspberry-Pi-4
 This is a project for fetching temperature from BMP280 sensor then displaying it on LCD2004A.
+
+Make sure to install wiringPi library `git clone https://github.com/WiringPi/WiringPi.git`
+- 
 To compile reading temperature program:
 
 ``` 
