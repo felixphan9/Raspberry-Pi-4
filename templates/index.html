@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Temperature Monitor</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-size: 16px;
@@ -23,32 +24,18 @@
         .card {
             margin-bottom: 20px;
         }
-    </style>
-    <script>
-        async function fetchTemperature() {
-            try {
-                const response = await fetch('/api/temperature');
-                const data = await response.json();
 
-                const temperatureElement = document.getElementById('temperature');
-                if (data.error) {
-                    temperatureElement.innerText = `⚠️ Error: ${data.error}`;
-                } else {
-                    temperatureElement.innerText = `${data.temperature} °C`;
-                }
-            } catch (error) {
-                const temperatureElement = document.getElementById('temperature');
-                temperatureElement.innerText = 'Error: Unable to fetch temperature';
-            }
+        .chart-container {
+            width: 100%;
+            height: 400px;
         }
-
-        setInterval(fetchTemperature, 5000);
-        window.onload = fetchTemperature;
-    </script>
+    </style>
 </head>
 <body>
     <div class="container">
         <h1 class="mt-5 text-center">Dashboard</h1>
+        
+        <!-- Temperature Display Card -->
         <div class="row">
             <div class="col-12 col-sm-6 col-md-4">
                 <div class="card text-center">
@@ -59,6 +46,88 @@
                 </div>
             </div>
         </div>
+
+        <!-- Chart Container -->
+        <div class="chart-container">
+            <canvas id="temperatureChart"></canvas>
+        </div>
     </div>
+
+    <script>
+        // Sample static data for the chart
+        const timeLabels = [];
+        const temperatureData = [];
+
+        // Create the chart
+        const ctx = document.getElementById('temperatureChart').getContext('2d');
+        const temperatureChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: timeLabels, // X-axis labels
+                datasets: [{
+                    label: 'Temperature (°C)',
+                    data: temperatureData, // Y-axis data
+                    borderColor: 'rgba(75, 192, 192, 1)', // Line color
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)', // Background color under the line
+                    fill: true, // Fill the area under the line
+                    tension: 0.1, // Smoothness of the line
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Temperature (°C)'
+                        },
+                        suggestedMin: 20,
+                        suggestedMax: 21,
+                    }
+                }
+            }
+        });
+
+        // Function to fetch temperature data (for future real-time updates)
+        async function fetchTemperature() {
+            try {
+                const response = await fetch('/api/temperature');
+                const data = await response.json();
+
+                const temperatureElement = document.getElementById('temperature');
+                if (data.error) {
+                    temperatureElement.innerText = `⚠️ Error: ${data.error}`;
+                } else {
+                    temperatureElement.innerText = `${data.temperature} °C`;
+
+                    // Add the fetched temperature data point
+                    const currentTime = new Date().toLocaleTimeString().slice(0, 5); // Get current time in HH:MM format
+
+                    timeLabels.push(currentTime); // Add current time to the labels
+                    temperatureData.push(data.temperature); // Add new temperature data to the array
+                    
+                    // Keep the chart data within a limit (e.g., show only last 5 data points)
+                    if (timeLabels.length > 5) {
+                        timeLabels.shift();
+                        temperatureData.shift();
+                    }
+                    // Update the chart 
+                    temperatureChart.update();
+                }
+            } catch (error) {
+                const temperatureElement = document.getElementById('temperature');
+                temperatureElement.innerText = 'Error: Unable to fetch temperature';
+            }
+        }
+
+        setInterval(fetchTemperature, 5000); // Fetch temperature every 5 seconds
+        window.onload = fetchTemperature;
+    </script>
 </body>
 </html>
